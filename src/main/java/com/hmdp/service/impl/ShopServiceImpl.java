@@ -47,8 +47,10 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
 
         // 互斥锁解决缓存击穿
-//        Shop shop = queryWithMutex(id);
-        Shop shop = queryWithLogicalExpire(id);
+        Shop shop = queryWithMutex(id);
+
+        // 逻辑过期解决缓存击穿
+//        Shop shop = queryWithLogicalExpire(id);
 
         if (shop == null){
             return Result.fail("商铺不存在");
@@ -156,7 +158,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             // 3.2.1 开启独立线程, 异步更新缓存
             CACHE_REBUILD_EXECUTOR.submit(() -> {
                 try {
-                    saveShop2Redis(id, 30L);
+                    saveShop2Redis(id, 3000L);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 } finally {
