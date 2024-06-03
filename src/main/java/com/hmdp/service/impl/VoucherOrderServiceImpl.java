@@ -9,6 +9,7 @@ import com.hmdp.service.IVoucherOrderService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.RedisIdWorker;
 import com.hmdp.utils.UserHolder;
+import org.springframework.aop.framework.AopContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,7 +32,8 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     @Resource
     private RedisIdWorker redisIdWorker;
     @Override
-    @Transactional
+
+//    @Transactional
     public Result secKillVoucher(Long voucherId) {
         // 查询优惠券
         SeckillVoucher voucher = seckillVoucherService.getById(voucherId);
@@ -45,6 +47,25 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         // 判断是否还有库存
         if (voucher.getStock() <= 0) {
             return Result.fail("库存不足");
+        }
+        // 一人一单
+        Long userId = UserHolder.getUser().getId();
+        // 用户Id加锁
+        synchronized (userId.toString().intern()) {
+            // 获取当前代理对象
+            IVoucherOrderService proxy = (IVoucherOrderService) AopContext.currentProxy();
+            return proxy.createVoucherOrder(voucherId);
+        }
+    }
+
+    @Transactional
+    public Result createVoucherOrder(Long voucherId){
+        Long userId = UserHolder.getUser().getId();
+        Integer count = query().eq("user_id", userId)
+                    .eq("voucher_id", voucherId)
+                    .count();
+        if (count > 0) {
+            return Result.fail("每人限购一张");
         }
         // 扣减库存
         boolean success = seckillVoucherService.update()
@@ -60,7 +81,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         long orderId = redisIdWorker.nextId("order");
         order.setId(orderId);
         order.setVoucherId(voucherId);
-        order.setUserId(UserHolder.getUser().getId());
+        order.setUserId(userId);
         // 保存订单
         save(order);
         return Result.ok(orderId);
