@@ -4,6 +4,8 @@ package com.hmdp;
 import cn.hutool.json.JSONUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -12,12 +14,15 @@ import org.springframework.test.context.junit4.SpringRunner;
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @SpringBootTest
 //@RunWith(SpringRunner.class)
 public class RedisTemplateTest {
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private RedissonClient redissonClient;
 
     @Test
     public void testList() {
@@ -46,5 +51,20 @@ public class RedisTemplateTest {
         }
         System.out.println(stuList);
 
+    }
+
+    @Test
+    void testRedisson() throws InterruptedException {
+        RLock lock = redissonClient.getLock("anyLock");
+        boolean success = lock.tryLock(1, 10, TimeUnit.SECONDS);
+        if (success) {
+            try {
+                System.out.println("获取锁成功，执行业务逻辑");
+                Thread.sleep(1000);
+            } finally {
+                lock.unlock();
+                System.out.println("释放锁");
+            }
+        }
     }
 }

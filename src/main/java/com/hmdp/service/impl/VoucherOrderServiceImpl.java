@@ -11,6 +11,8 @@ import com.hmdp.utils.ILock;
 import com.hmdp.utils.RedisIdWorker;
 import com.hmdp.utils.RedisLock;
 import com.hmdp.utils.UserHolder;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -35,9 +37,10 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     @Resource
     private RedisIdWorker redisIdWorker;
     @Resource
-    StringRedisTemplate stringRedisTemplate;
+    private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private RedissonClient redissonClient;
     @Override
-
 //    @Transactional
     public Result secKillVoucher(Long voucherId) {
         // 查询优惠券
@@ -62,9 +65,10 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             IVoucherOrderService proxy = (IVoucherOrderService) AopContext.currentProxy();
             return proxy.createVoucherOrder(voucherId);
         }*/
-        ILock lock = new RedisLock("order:" + userId.toString(),
-                stringRedisTemplate);
-        boolean success = lock.tryLock(1200);
+//        ILock lock = new RedisLock("order:" + userId.toString(),
+//                stringRedisTemplate);
+        RLock lock = redissonClient.getLock("lock:order:" + userId.toString());
+        boolean success = lock.tryLock(); // 无参, 不等待
         if (!success) {
             return Result.fail("请勿重复提交");
         }
