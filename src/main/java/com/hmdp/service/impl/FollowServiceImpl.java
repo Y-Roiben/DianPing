@@ -47,4 +47,10 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
         }
         return Result.ok(false);
     }
+
+    @Override
+    public Result common(Long id) {
+        Long userId = UserHolder.getUser().getId();
+        return Result.ok();
+    }
 }
