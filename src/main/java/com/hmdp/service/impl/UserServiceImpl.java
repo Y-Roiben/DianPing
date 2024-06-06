@@ -16,6 +16,7 @@ import com.hmdp.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.connection.BitFieldSubCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +26,7 @@ import javax.servlet.http.HttpSession;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -126,6 +128,41 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         int dayOfMonth = now.getDayOfMonth();
         stringRedisTemplate.opsForValue().setBit(key, dayOfMonth - 1, true);
         return Result.ok();
+    }
+
+    @Override
+    public Result signCount() {
+        // 获取用户以及日期
+        UserDTO user = UserHolder.getUser();
+        // 当前日期
+        LocalDateTime now = LocalDateTime.now();
+        String date = now.format(DateTimeFormatter.ofPattern("yyyyMM"));
+        // 签到的key
+        String key = "sign:" + user.getId() + ":" + date;
+        // 当前是本月的第几天
+        int dayOfMonth = now.getDayOfMonth();
+        // 获取签到记录
+        List<Long> res = stringRedisTemplate.opsForValue().bitField(
+                key, BitFieldSubCommands.create()
+                        .get(BitFieldSubCommands.BitFieldType.unsigned(dayOfMonth))
+                        .valueAt(0)
+        );
+        if (res == null || res.isEmpty()) {
+            return Result.ok(0);
+        }
+        Long num = res.get(0);
+        if (num == null || num == 0) {
+            return Result.ok(0);
+        }
+        int count = 0;
+        while ((num & 1) != 0) {
+            count++;
+            num >>>= 1;
+        }
+        return Result.ok(count);
+
+
+
     }
 
     private User createUserByPhone (String phone){
