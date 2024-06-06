@@ -81,4 +81,11 @@ public class BlogController {
         List<Blog> records = page.getRecords();
         return Result.ok(records);
     }
+
+    @GetMapping("/of/follow")
+    public Result queryBlogOfFollow(
+            @RequestParam(value = "offset", defaultValue = "0") Integer offset,
+            @RequestParam(value = "lastId") Long max) {
+        return blogService.queryBlogOfFollow(offset, max);
+    }
 }
