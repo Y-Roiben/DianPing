@@ -6,10 +6,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hmdp.dto.Result;
 import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.Blog;
+import com.hmdp.entity.Follow;
 import com.hmdp.entity.User;
 import com.hmdp.mapper.BlogMapper;
 import com.hmdp.service.IBlogService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.hmdp.service.IFollowService;
+import com.hmdp.service.IUserService;
 import com.hmdp.utils.SystemConstants;
 import com.hmdp.utils.UserHolder;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -35,9 +38,11 @@ import static com.hmdp.utils.RedisConstants.BLOG_LIKED_KEY;
 public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IBlogService {
 
     @Resource
-    private UserServiceImpl userService;
+    private IUserService userService;
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private IFollowService followService;
 
     @Override
     public Result queryBlogById(Long id) {
@@ -131,5 +136,30 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
             return Result.ok(userDTOS);
         }
         return Result.ok();
+    }
+
+    @Override
+    public Result saveBlog(Blog blog) {
+        // 获取登录用户
+        UserDTO user = UserHolder.getUser();
+        blog.setUserId(user.getId());
+        // 保存探店博文
+        boolean save = save(blog);
+        if (save) {
+            // 查询粉丝
+            List<Follow> follows = followService.query()
+                    .eq("follow_user_id", user.getId())
+                    .list();
+            // 通知粉丝
+            for (Follow follow : follows) {
+                String key = "feed:" + follow.getUserId();
+                stringRedisTemplate.opsForZSet().add(
+                        key, blog.getId().toString(), System.currentTimeMillis()
+                );
+            }
+            return Result.ok();
+        }
+        // 返回id
+        return Result.fail("保存失败");
     }
 }
