@@ -125,7 +125,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         // 查询top5
         String key = BLOG_LIKED_KEY + id;
         Set<String> top5 = stringRedisTemplate.opsForZSet().range(key, 0, 4);
-        if (top5 != null) {
+        if (top5 != null && !top5.isEmpty()) {
             List<Long> ids = top5.stream().map(Long::valueOf).collect(Collectors.toList());
             String idString = StrUtil.join(",", ids);
             List<User> users = userService.query()
