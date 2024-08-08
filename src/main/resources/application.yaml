@@ -3,6 +3,10 @@ server:
 spring:
   application:
     name: hmdp
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
   datasource:
     driver-class-name: com.mysql.jdbc.Driver
     url: jdbc:mysql://localhost:3306/hmdp?useSSL=false&serverTimezone=UTC
@@ -25,3 +29,12 @@ mybatis-plus:
 logging:
   level:
     com.hmdp: debug
+minio:
+  endpoint: http://127.0.0.1:9000 #内网地址
+  public: http://127.0.0.1:9000  #外网访问地址
+  accessKey: minioadmin
+  secretKey: minioadmin
+  bucketName: dian-ping
+  imagePath: image
+  filePath: file
+  videoPath: video

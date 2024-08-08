@@ -20,6 +20,7 @@ public class MVCConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new LoginInterceptor())
                 .excludePathPatterns(
+                        "/file/**",
                         "/user/code",
                         "/user/login",
                         "/blog/hot",
